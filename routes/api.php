@@ -28,6 +28,7 @@ Route::prefix('user')->middleware(['LoginAuth','LoginAuthAfter'])->group(functio
     Route::delete('/{id}', [UserController::class, 'delete']);
     Route::post('/login', [UserController::class, 'login'])->withoutMiddleware('LoginAuth');
     Route::post('/logout', [UserController::class, 'logout']);
+    Route::post('/logoutAll', [UserController::class, 'logoutAll']);
 
 
 });

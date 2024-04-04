@@ -52,7 +52,7 @@ class UserModel{
     public $age = null;
     public $gender = null;
     public $id=null;
-    public $refreshToken=null;
+    public $refreshTokens="";
   
     public function __construct($username, $password, $isAdmin, $sdt, $age, $gender){
         $this->username = $username;
@@ -74,7 +74,7 @@ class UserModel{
             'age' => $this->age,
             'gender' => $this->gender,
             'id' => $this->id,
-           'refreshToken' => $this->refreshToken
+           'refreshTokens' => $this->refreshTokens
         ];
     }
     public function checkValidations(){

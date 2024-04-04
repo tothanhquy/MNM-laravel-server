@@ -85,7 +85,12 @@ class UserController extends Controller{
             }else{
                 $newRefreshToken = JwtAuth::generateRandomString(20);
                 $newAccessToken = JwtAuth::generateRandomString(20);
-                $updateFields = ["refreshToken"=>$newRefreshToken];
+
+                $newRefreshToken = JwtAuth::generateRandomString(20);
+                $refreshTokens = explode(",",$userQuery["refreshTokens"]);
+                array_push($refreshTokens,$newRefreshToken);
+                $updateFields = ["refreshTokens"=>implode(",",$refreshTokens)];
+                
                 $queryResult = $userService->updateFields($user_id,$updateFields);
                 if($queryResult->isCompleted===false){
                     throw new Exception("Server error");
@@ -105,6 +110,7 @@ class UserController extends Controller{
         try {
             $user_id = $request->header('user_id');
             $accessToken = $request->header('user_access_token');
+            $refreshToken = $request->header('user_refresh_token');
     
             $userService = new UserService();
             $queryResult = $userService->getById($user_id);
@@ -113,14 +119,45 @@ class UserController extends Controller{
             }
             $userQuery = $queryResult->data;
 
-            $newRefreshToken = JwtAuth::generateRandomString(20);
-            $updateFields = ["refreshToken"=>$newRefreshToken];
+            $refreshTokens = explode(",",$userQuery["refreshTokens"]);
+            if (($key = array_search($refreshToken, $refreshTokens)) !== false) {
+                unset($refreshTokens[$key]);
+            }
+            $updateFields = ["refreshTokens"=>implode(",",$refreshTokens)];
+
             $queryResult = $userService->updateFields($user_id,$updateFields);
             if($queryResult->isCompleted===false){
                 throw new Exception("Server error");
             }
             RedisManager::delWhiteList($user_id.$accessToken);
             RedisManager::addBlackList($user_id.$accessToken);
+
+            return response()->json(ControllerResponse::Success(["isCompleted"=>true]));
+            
+        } catch (Exception $e) {
+            // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
+            echo "Error: " . $e->getMessage();
+            return response()->json(ControllerResponse::Error(500,"Server Error"));
+        }
+    }
+    public function logoutAll(Request  $request) {    
+        try {
+            $user_id = $request->header('user_id');
+    
+            $userService = new UserService();
+            $queryResult = $userService->getById($user_id);
+            if($queryResult->isCompleted===false){
+                return response()->json(ControllerResponse::Error(500,"System Error"));
+            }
+            $userQuery = $queryResult->data;
+
+            $updateFields = ["refreshTokens"=>""];
+
+            $queryResult = $userService->updateFields($user_id,$updateFields);
+            if($queryResult->isCompleted===false){
+                throw new Exception("Server error");
+            }
+            RedisManager::delWhiteListByUser($user_id);
 
             return response()->json(ControllerResponse::Success(["isCompleted"=>true]));
             

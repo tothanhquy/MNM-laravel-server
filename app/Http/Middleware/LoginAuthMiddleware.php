@@ -34,6 +34,7 @@ class LoginAuthMiddleware
             $user_id = $jwtUser["id"];
             $request->headers->set('user_id', $user_id);
             $request->headers->set('user_access_token', $jwtAccessToken);
+            $request->headers->set('user_refresh_token', $jwtRefreshToken);
 
             if(RedisManager::inWhiteList($user_id.$jwtAccessToken)){
                 return $next($request);
@@ -50,16 +51,22 @@ class LoginAuthMiddleware
             }
 
             $userQuery = $queryResult->data;
+            $refreshTokens = explode(",",$userQuery["refreshTokens"]);
 
-            if($userQuery->refreshToken!=$jwtRefreshToken){
+            if(empty($refreshTokens)||!in_array($jwtRefreshToken,$refreshTokens)){
                 //invalid user
                 RedisManager::addBlackList($user_id.$jwtAccessToken);
                 return response()->json(ControllerResponse::Error(403,"not authenticated"));
             }else{
                 $newRefreshToken = JwtAuth::generateRandomString(20);
                 $newAccessToken = JwtAuth::generateRandomString(20);
-                $userQuery->refreshToken = $newRefreshToken;
-                $updateFields = ["refreshToken"=>$newAccessToken];
+
+                if (($key = array_search($refreshToken, $refreshTokens)) !== false) {
+                    unset($refreshTokens[$key]);
+                }
+                array_push($refreshTokens,$newRefreshToken);
+
+                $updateFields = ["refreshTokens"=>implode(",",$refreshTokens)];
                 $queryResult = $userService->updateFields($user_id,$updateFields);
                 if($queryResult->isCompleted===false){
                     throw new Exception("Server error");
@@ -67,11 +74,13 @@ class LoginAuthMiddleware
                 RedisManager::addWhiteList($user_id.$newAccessToken);
                 $newJwt = JwtAuth::encode($user_id, $newAccessToken, $newRefreshToken);
                 $request->headers->set('newAuthorization', $newJwt);
+                $request->headers->set('user_access_token', $newAccessToken);
+                $request->headers->set('user_refresh_token', $newRefreshToken);
                 return $next($request);
             }
             
         }catch(Exception $e){
-            return response()->json(ControllerResponse::Error(500,"Server error: " . $e->getMessage));
+            return response()->json(ControllerResponse::Error(500,"Server error: " . $e->getMessage()));
         }
         
     }
