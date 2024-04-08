@@ -48,7 +48,6 @@ class UserService extends Database{
     public function __construct(){
         parent::__construct();
         $this->collection = $this->db->selectCollection("user");
-        $date = time();
     }
     private function isDuplicateUserName($username){
         $cursor = $this->collection->find(['username' => $username]);
