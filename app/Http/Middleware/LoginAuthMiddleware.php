@@ -17,31 +17,38 @@ class LoginAuthMiddleware
      * @param  \Closure  $next
      * @return mixed
      */
-    public function handle($request, Closure $next)
+    public function handle($request, Closure $next, $authRole="user")
     {
         try{
             // Thực hiện bất kỳ xử lý nào bạn muốn trước khi chuyển yêu cầu đến bên trong ứng dụng
             $jwt = $request->header('Authorization');
             if(empty($jwt)){
-                return response()->json(ControllerResponse::Error(403,"not authenticated"));
+                return response()->json(ControllerResponse::Error("not authenticated",403));
             }
             $jwtUser = JwtAuth::decode($jwt);
             if($jwtUser==null){
-                return response()->json(ControllerResponse::Error(403,"not authenticated"));
+                return response()->json(ControllerResponse::Error("not authenticated",403));
             }
             $jwtAccessToken = $jwtUser["accessToken"];
             $jwtRefreshToken = $jwtUser["refreshToken"];
+            $role=$jwtUser["role"];
             $user_id = $jwtUser["id"];
+
+            if(strstr($role,$authRole)===false){
+                return response()->json(ControllerResponse::Error(403,"not authenticated"));
+            }
+
             $request->headers->set('user_id', $user_id);
             $request->headers->set('user_access_token', $jwtAccessToken);
             $request->headers->set('user_refresh_token', $jwtRefreshToken);
+            $request->headers->set('role', $role);
 
             if(RedisManager::inWhiteList($user_id.$jwtAccessToken)){
                 return $next($request);
             }
 
             if(RedisManager::inBlackList($user_id.$jwtAccessToken)){
-                return response()->json(ControllerResponse::Error(403,"not authenticated"));
+                return response()->json(ControllerResponse::Error("not authenticated",403));
             }
 
             $userService = new UserService();
@@ -56,7 +63,7 @@ class LoginAuthMiddleware
             if(empty($refreshTokens)||!in_array($jwtRefreshToken,$refreshTokens)){
                 //invalid user
                 RedisManager::addBlackList($user_id.$jwtAccessToken);
-                return response()->json(ControllerResponse::Error(403,"not authenticated"));
+                return response()->json(ControllerResponse::Error("not authenticated",403));
             }else{
                 $newRefreshToken = JwtAuth::generateRandomString(20);
                 $newAccessToken = JwtAuth::generateRandomString(20);
@@ -80,8 +87,9 @@ class LoginAuthMiddleware
             }
             
         }catch(Exception $e){
-            return response()->json(ControllerResponse::Error(500,"Server error: " . $e->getMessage()));
+            return response()->json(ControllerResponse::Error("Server error: " . $e->getMessage(),500));
         }
         
     }
+    
 }

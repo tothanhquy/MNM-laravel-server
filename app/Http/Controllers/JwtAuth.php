@@ -23,16 +23,17 @@ class JwtAuth{
     
         return $randomString;
     }
-    public static function createUser($id, $accessToken, $refreshToken){
+    public static function createUser($id, $accessToken, $refreshToken, $role){
         $user = [
             'id' => $id,
             'accessToken' => $accessToken,
-            'refreshToken' => $refreshToken
+            'refreshToken' => $refreshToken,
+            'role' => $role
         ];
         return $user;
     }
     public static function isValidUser($user){
-        if(!isset($user)||!isset($user["id"])||!isset($user["accessToken"])||!isset($user["refreshToken"])){
+        if(!isset($user)||!isset($user["id"])||!isset($user["accessToken"])||!isset($user["refreshToken"])||!isset($user["role"])){
             return false;
         }
         return true;
@@ -42,8 +43,8 @@ class JwtAuth{
         $signer = new HS256($key);
         return $signer;
     }
-    public static function encode($id, $accessToken, $refreshToken){
-        $user = self::createUser($id, $accessToken, $refreshToken);
+    public static function encode($id, $accessToken, $refreshToken, $role){
+        $user = self::createUser($id, $accessToken, $refreshToken,$role);
         $generator = new Generator(self::getSigner());
         return $generator->generate($user);
     }

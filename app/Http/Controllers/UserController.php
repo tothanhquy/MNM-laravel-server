@@ -24,10 +24,15 @@ class UserController extends Controller{
             $userService = new UserService();
             $newUser->refreshToken = JwtAuth::generateRandomString(20);
             $res = $userService->insert($newUser);
-            echo json_encode($res);
+            if($res->isCompleted==false){
+                return response()->json(ControllerResponse::Error($res->message));
+            }else{
+                return response()->json(ControllerResponse::Success($res->data));
+            }
         } catch (Exception $e) {
             // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
     public function update (Request  $request, $id) {    
@@ -41,10 +46,15 @@ class UserController extends Controller{
             $newUser = new UserModel($username, $password,false, $sdt, $age, $gender);
             $userService = new UserService();
             $res = $userService->update($id, $newUser);
-            echo json_encode($res);
+            if($res->isCompleted==false){
+                return response()->json(ControllerResponse::Error($res->message));
+            }else{
+                return response()->json(ControllerResponse::Success($res->data));
+            }
         } catch (Exception $e) {
             // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
 
@@ -52,20 +62,33 @@ class UserController extends Controller{
         try {
             $userService = new UserService();
             $res = $userService->getById($id);
-            echo json_encode($res);
+
+            if($res->isCompleted==false){
+                return response()->json(ControllerResponse::Error($res->message));
+            }else{
+                $id = $res->data["_id"]->toString();
+                unset($res->data["_id"]);
+                $res->data["id"] = $id;
+                return response()->json(ControllerResponse::Success($res->data));
+            }
         } catch (Exception $e) {
             // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
     public function delete (Request  $request, $id) {    
         try {
             $userService = new UserService();
             $res = $userService->delete($id);
-            echo json_encode($res);
+            if($res->isCompleted===false){
+                return response()->json(ControllerResponse::Error($res->message));
+            }else{
+                return response()->json(ControllerResponse::Success(""));
+            }
         } catch (Exception $e) {
-            // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
     public function login(Request  $request) {    
@@ -76,12 +99,13 @@ class UserController extends Controller{
             $userService = new UserService();
             $queryResult = $userService->getByUsername($username);
             if($queryResult->isCompleted===false){
-                return response()->json(ControllerResponse::Success(["isCompleted"=>false,"message"=>"username or password wrong"]));
+                return response()->json(ControllerResponse::Error("username or password wrong"));
             }
             $userQuery = $queryResult->data;
             $user_id = $userQuery->_id->__toString();
+            $role = $userQuery["role"];
             if(!password_verify($password, $userQuery->password)){
-                return response()->json(ControllerResponse::Success(["isCompleted"=>false,"message"=>"username or password wrong"]));
+                return response()->json(ControllerResponse::Error("username or password wrong"));
             }else{
                 $newRefreshToken = JwtAuth::generateRandomString(20);
                 $newAccessToken = JwtAuth::generateRandomString(20);
@@ -96,14 +120,14 @@ class UserController extends Controller{
                     throw new Exception("Server error");
                 }
                 RedisManager::addWhiteList($user_id.$newAccessToken);
-                $newJwt = JwtAuth::encode($user_id, $newAccessToken, $newRefreshToken);
+                $newJwt = JwtAuth::encode($user_id, $newAccessToken, $newRefreshToken,$role);
 
-                return response()->json(ControllerResponse::Success(["isCompleted"=>true,"jwt"=>$newJwt]));
+                return response()->json(ControllerResponse::Success(["jwt"=>$newJwt]));
             }
         } catch (Exception $e) {
             // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
-            return response()->json(ControllerResponse::Error(500,"Server Error"));
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
     public function logout(Request  $request) {    
@@ -115,7 +139,7 @@ class UserController extends Controller{
             $userService = new UserService();
             $queryResult = $userService->getById($user_id);
             if($queryResult->isCompleted===false){
-                return response()->json(ControllerResponse::Error(500,"System Error"));
+                return response()->json(ControllerResponse::Error("System Error",500));
             }
             $userQuery = $queryResult->data;
 
@@ -136,8 +160,8 @@ class UserController extends Controller{
             
         } catch (Exception $e) {
             // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
-            return response()->json(ControllerResponse::Error(500,"Server Error"));
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
     public function logoutAll(Request  $request) {    
@@ -147,7 +171,7 @@ class UserController extends Controller{
             $userService = new UserService();
             $queryResult = $userService->getById($user_id);
             if($queryResult->isCompleted===false){
-                return response()->json(ControllerResponse::Error(500,"System Error"));
+                return response()->json(ControllerResponse::Error("System Error",500));
             }
             $userQuery = $queryResult->data;
 
@@ -163,8 +187,8 @@ class UserController extends Controller{
             
         } catch (Exception $e) {
             // Nếu có ngoại lệ xảy ra, in ra thông báo lỗi
-            echo "Error: " . $e->getMessage();
-            return response()->json(ControllerResponse::Error(500,"Server Error"));
+            
+            return response()->json(ControllerResponse::Error("Server Error",500));
         }
     }
 }

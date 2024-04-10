@@ -31,7 +31,7 @@ class ProductModel{
     public $updatedAt = "";
     public $deletedAt = 0;
     public $categoryId = null;
-    public $comments = [];
+    // public $comments = [];
 
     public static function getPrice($size, $price){
         return [
@@ -39,12 +39,12 @@ class ProductModel{
             "price" => $price
         ];
     }
-    public static function getComment($author, $content){
-        return [
-            "author" => $author,
-            "content" => $content
-        ];
-    }
+    // public static function getComment($author, $content){
+    //     return [
+    //         "author" => $author,
+    //         "content" => $content
+    //     ];
+    // }
 
     public function __construct($name, $prices, $image, $rating, $description, $included, $categoryId){
         $this->name = $name;
@@ -68,8 +68,7 @@ class ProductModel{
             "createdAt" => $this->createdAt,
             "updatedAt" => $this->updatedAt,
             "deletedAt" => $this->deletedAt,
-            "categoryId" => $this->categoryId,
-            "comments" => $this->comments
+            "categoryId" => $this->categoryId
         ];
     }
     public function checkValidations(){
